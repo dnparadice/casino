@@ -1,9 +1,11 @@
+import ast
 import tkinter as tk
 from tkinter import ttk
-import poker
+
 
 from logger import Logger
-from poker import PokerPlayer
+import poker
+import roulette
 
 log = Logger()
 
@@ -12,6 +14,7 @@ class Casino:
 
     def __init__(self):
         self.poker_table = poker.PokerTable()
+        self.roulette_table = roulette.RouletteTable()
         self.ui = UserInterface(self)
 
     def start(self):
@@ -50,22 +53,26 @@ class UserInterface(tk.Tk):
         self.roulette_left_frame = ttk.Frame(self.roulette_tab)
         self.roulette_left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        self.roulette_entry_bank_amount = ttk.Entry(self.roulette_left_frame)
+        self.roulette_entry_bank_amount = ttk.Entry(self.roulette_left_frame,)
+        self.roulette_entry_bank_amount.insert(0, '777')
         self.roulette_entry_bank_amount.grid(row=0, column=0, padx=0, pady=10)
         self.roulette_label_bank_amount = ttk.Label(self.roulette_left_frame, text="Bank Amount")
         self.roulette_label_bank_amount.grid(row=0, column=1, padx=0, pady=10)
 
         self.roulette_entry_bet_amount = ttk.Entry(self.roulette_left_frame)
+        self.roulette_entry_bet_amount.insert(0, '10')
         self.roulette_entry_bet_amount.grid(row=1, column=0, padx=10, pady=10)
         self.roulette_label_bet_amount = ttk.Label(self.roulette_left_frame, text="Bet Amount")
         self.roulette_label_bet_amount.grid(row=1, column=1, padx=10, pady=10)
 
         self.roulette_entry_bet_positions = ttk.Entry(self.roulette_left_frame)
+        self.roulette_entry_bet_positions.insert(0, '12,00,(3,4)')
         self.roulette_entry_bet_positions.grid(row=2, column=0, padx=10, pady=10)
         self.roulette_label_bet_positions = ttk.Label(self.roulette_left_frame, text="Bet Positions (e.g. 12,00,3)")
         self.roulette_label_bet_positions.grid(row=2, column=1, padx=10, pady=10)
 
         self.roulette_entry_number_of_spins = ttk.Entry(self.roulette_left_frame)
+        self.roulette_entry_number_of_spins.insert(0, '1')
         self.roulette_entry_number_of_spins.grid(row=3, column=0, padx=10, pady=10)
         self.roulette_label_number_of_spins = ttk.Label(self.roulette_left_frame, text="Number of Spins")
         self.roulette_label_number_of_spins.grid(row=3, column=1, padx=10, pady=10)
@@ -73,6 +80,7 @@ class UserInterface(tk.Tk):
         # right frame
         self.roulette_right_frame = ttk.Frame(self.roulette_tab)
         self.roulette_right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+
 
         # create button "run simulation"
         self.roulette_run_simulation_button = ttk.Button(self.roulette_right_frame, text="Run Simulation", command=self.run_roulette_simulation)
@@ -115,8 +123,36 @@ class UserInterface(tk.Tk):
     #                                 Roulette
     # -------------------------------------------------------------------------------------
 
+
     def run_roulette_simulation(self):
-        pass
+        """ Runs a simulation of the roulette game based on user input """
+        try:
+            # add a player to the roulette table
+            p_name = 'Bob'
+            roulette_table = self.casino.roulette_table
+            bank_amount = self.roulette_entry_bank_amount.get()
+            player = roulette.RoulettePlayer(p_name)
+            player.chips += float(bank_amount)
+            roulette_table.add_player(player)
+
+            # setup the game
+            number_of_spins = int(self.roulette_entry_number_of_spins.get())
+            for spin in range(number_of_spins):
+                bet_amount = self.roulette_entry_bet_amount.get()
+                bet_positions = self.roulette_entry_bet_positions.get()
+                roulette_table.table_place_bet(bet_positions, bet_amount, player_name=p_name)
+                roulette_table.spin_the_wheel()
+
+                # display the results in the game messages text field
+                self.game_messages.replace("1.0", tk.END, roulette_table.get_game_state_string())
+
+
+        except Exception as ex:
+            self.game_messages.replace("1.0", tk.END, f"Error Placing Bet: {ex}")
+            return # -------------------------------------------------------------------------------------------------->
+
+
+
 
     # -------------------------------------------------------------------------------------
     #                                  Poker
@@ -172,7 +208,7 @@ class UserInterface(tk.Tk):
             self.game_messages.replace("1.0", tk.END, table.get_game_state_string())
 
     def button_fold(self):
-        for human in self.casino.poker_table.human_players: # type: PokerPlayer # at this point there is only 1 human player but it's a list
+        for human in self.casino.poker_table.human_players: # type: poker.PokerPlayer # at this point there is only 1 human player but it's a list
             human.folded = True
         self.casino.poker_table.progress_game('button_bet')
         self.update_pot_and_current_bet_display()
