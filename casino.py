@@ -42,6 +42,8 @@ class UserInterface(tk.Tk):
         self.roulette_tab = ttk.Frame(self.notebook)
         self.notebook.add(self.roulette_tab, text="Roulette")
 
+        self.notebook.bind("<<NotebookTabChanged>>", self._notebook_tab_changed)
+
         self.poker_table_frame = ttk.Frame(self.poker_tab)
         self.poker_table_frame.pack(fill=tk.BOTH, expand=True)
 
@@ -66,7 +68,7 @@ class UserInterface(tk.Tk):
         self.roulette_label_bet_amount.grid(row=1, column=1, padx=10, pady=10)
 
         self.roulette_entry_bet_positions = ttk.Entry(self.roulette_left_frame)
-        self.roulette_entry_bet_positions.insert(0, '12,00,(3,4)')
+        self.roulette_entry_bet_positions.insert(0, '12,0,(3,4)')
         self.roulette_entry_bet_positions.grid(row=2, column=0, padx=10, pady=10)
         self.roulette_label_bet_positions = ttk.Label(self.roulette_left_frame, text="Bet Positions (e.g. 12,00,3)")
         self.roulette_label_bet_positions.grid(row=2, column=1, padx=10, pady=10)
@@ -77,6 +79,12 @@ class UserInterface(tk.Tk):
         self.roulette_label_number_of_spins = ttk.Label(self.roulette_left_frame, text="Number of Spins")
         self.roulette_label_number_of_spins.grid(row=3, column=1, padx=10, pady=10)
 
+        # add boolean selector for American or European roulette
+        self.roulette_european_var = tk.BooleanVar(value=True)
+        self.roulette_european_checkbutton = ttk.Checkbutton(self.roulette_left_frame, text="European Roulette", variable=self.roulette_european_var)
+        self.roulette_european_checkbutton.grid(row=4, column=0, padx=10, pady=10, columnspan=2)
+
+
         # right frame
         self.roulette_right_frame = ttk.Frame(self.roulette_tab)
         self.roulette_right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
@@ -85,8 +93,6 @@ class UserInterface(tk.Tk):
         # create button "run simulation"
         self.roulette_run_simulation_button = ttk.Button(self.roulette_right_frame, text="Run Simulation", command=self.run_roulette_simulation)
         self.roulette_run_simulation_button.pack(pady=10)
-
-
 
         # ---------- Poker Stuff -----------------------
 
@@ -119,6 +125,16 @@ class UserInterface(tk.Tk):
         self.poker_game_state.pack()
 
 
+    def _notebook_tab_changed(self, event):
+        """ Handles the notebook tab change event to update the game messages """
+        current_tab = self.notebook.index(self.notebook.select())
+        if current_tab == 0:
+            # Poker tab selected
+            self.game_messages.replace("1.0", tk.END, self.casino.poker_table.get_game_state_string())
+            self.update_pot_and_current_bet_display()
+        elif current_tab == 1:
+            self.game_messages.replace("1.0", tk.END, self.casino.roulette_table.get_game_state_string())
+
     # -------------------------------------------------------------------------------------
     #                                 Roulette
     # -------------------------------------------------------------------------------------
@@ -127,10 +143,14 @@ class UserInterface(tk.Tk):
     def run_roulette_simulation(self):
         """ Runs a simulation of the roulette game based on user input """
         try:
+
+            # create a new table based on user settings
+            use_euro = self.roulette_european_var.get()
+            roulette_table = self.casino.roulette_table = roulette.RouletteTable(european=use_euro)
+            bank_amount = self.roulette_entry_bank_amount.get()
+
             # add a player to the roulette table
             p_name = 'Bob'
-            roulette_table = self.casino.roulette_table
-            bank_amount = self.roulette_entry_bank_amount.get()
             player = roulette.RoulettePlayer(p_name)
             player.chips += float(bank_amount)
             roulette_table.add_player(player)

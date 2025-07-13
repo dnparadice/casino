@@ -8,7 +8,7 @@ class RoulettePlayer(CasinoPlayer):
         self.bet_positions = dict() # like {<bet positions>: <amount>, ...} ex: {(23): 5.0, (2,5): 12.0, (12,15,11,14): 15.0}
         self._running_winning_numbers = [] # type: list[str] # a list of winning positions after the wheel is spun
 
-    def place_bet(self, positions: list, amount: float, wheel_positions: list):
+    def place_bet(self, positions: tuple, amount: float, wheel_positions: list):
         """ positions is a list of 1, 2, or 4 positions to bet. If more than one position is given the numbers must be
         adjacent on the table.
         :param positions: A list of positions to bet on, like [23] or [2, 5] or [12, 15, 11, 14]
@@ -19,8 +19,9 @@ class RoulettePlayer(CasinoPlayer):
         if not isinstance(positions, list|tuple) or len(positions) not in [1, 2, 3, 4]:
             positions = [positions] # its a position like '12', make it a list
 
-        if any(pos not in wheel_positions for pos in positions):
-            raise ValueError("Invalid bet positions. Positions must be between 0 and 36.")
+        pos_check = list((pos not in wheel_positions for pos in positions))
+        if any(pos_check):
+            raise ValueError(f"Invalid bet positions: '{positions}'. Positions must be in: '{wheel_positions}'.")
 
         if amount <= 0:
             raise ValueError("Bet amount must be greater than zero.")
@@ -78,16 +79,20 @@ class RouletteTable:
             raise ValueError("Player must be an instance of RoulettePlayer")
         self._players.append(player)
 
-
-
     def spin_the_wheel(self):
         """ Simulates spinning the roulette wheel and pays out the winners """
-        winning_position = random.choice(self._wheel_positions) # type: str # like '23' or '00'
+
+        debug = False # todo: don't commit if this is True
+        if debug is False:
+            winning_position = random.choice(self._wheel_positions) # type: str # like '23' or '00'
+        else:
+            winning_position = '3'
+
         self._winning_positions.append(winning_position)
         for player in self._players: # type: RoulettePlayer
             for positions, amount in player.bet_positions.items(): # positions like: (23) or (2,5); amount like 10.0
 
-                str_pos = (str(p) for p in positions) # the string version of the positions, like ('23') or ('2', '5')
+                str_pos = list((str(p) for p in positions)) # the string version of the positions, like ('23') or ('2', '5')
 
                 if winning_position in str_pos: # check if the player has a bet on the winning position
 
@@ -108,17 +113,54 @@ class RouletteTable:
         return winning_position
 
     def get_table_numbers_string(self) -> str:
-        table = """
-                +------------------------------------------------------------+
-                    | 3 | 6 | 9 | 12 | 15 | 18 | 21 | 24 | 27 | 30 | 33 | 36 |
-                     --------------------------------------------------------
-                  0 | 2 | 5 | 8 | 11 | 14 | 17 | 20 | 23 | 26 | 29 | 32 | 35 |
-                     --------------------------------------------------------
-                    | 1 | 4 | 7 | 10 | 13 | 16 | 19 | 22 | 25 | 28 | 31 | 34 |
-                +------------------------------------------------------------+
+        if self._european_table is True:
+            table = """
+                    +------------------------------------------------------------+
+                        | 3 | 6 | 9 | 12 | 15 | 18 | 21 | 24 | 27 | 30 | 33 | 36 |
+                         --------------------------------------------------------
+                      0 | 2 | 5 | 8 | 11 | 14 | 17 | 20 | 23 | 26 | 29 | 32 | 35 |
+                         --------------------------------------------------------
+                        | 1 | 4 | 7 | 10 | 13 | 16 | 19 | 22 | 25 | 28 | 31 | 34 |
+                    +------------------------------------------------------------+
+                    """
+        else:
+            table = """
+                    +------------------------------------------------------------+
+                      0 | 3 | 6 | 9 | 12 | 15 | 18 | 21 | 24 | 27 | 30 | 33 | 36 |
+                         --------------------------------------------------------
+                    ----| 2 | 5 | 8 | 11 | 14 | 17 | 20 | 23 | 26 | 29 | 32 | 35 |
+                         --------------------------------------------------------
+                     00 | 1 | 4 | 7 | 10 | 13 | 16 | 19 | 22 | 25 | 28 | 31 | 34 |
+                    +------------------------------------------------------------+
                 """
-        return table
+        # creates a string like below that shows the winning positions and their color:
+        """
+        Red   : 3    7  22 
+        Black :   4         29
+        """
+        red_str =   "Red   : "
+        black_str = "Black : "
+        grn_str =   "Green : "
 
+        wins_to_show  = self._winning_positions[-25:] if len(self._winning_positions) >= 25 else self._winning_positions
+        for pos in wins_to_show: # only show the last 25 winning positions
+                color = self._red_black_lut[pos]
+                if color == 'red':
+                    red_str += f" {pos:2} "
+                    black_str += f"    "
+                    grn_str += f"    "
+                elif color == 'black':
+                    red_str += f"    "
+                    black_str += f" {pos:02} "
+                    grn_str += f"    "
+                else: # green
+                    red_str += f"    "
+                    black_str += f"    "
+                    grn_str += f" {pos:02} "
+
+        state_string = f"{table}\n\n\nWinning Numbers:\n{red_str}\n{black_str}\n{grn_str}"
+
+        return state_string
 
     def get_game_state_string(self) -> str:
         return self.get_table_numbers_string()
@@ -153,6 +195,9 @@ class RouletteTable:
             else:
                 updated_positions.append(st)
 
+        # all the bet positions need to be iterables, so convert them if they are strings
+        formatted_positions = [(p,) if isinstance(p, str) else p for p in updated_positions]
+
         # multiple value betting, need to check a few things
         if isinstance(amt_tup, tuple):
             len_bets = len(amt_tup)
@@ -162,17 +207,19 @@ class RouletteTable:
                 raise ValueError(f"Number of bets {len_bets} does not match number of positions {len_positions}") # !
 
             # iterate over positions(p) and amounts(a) and place the bets
-            bets = {p:a for p, a in zip(updated_positions, amt_tup)}
+            bets = {p:a for p, a in zip(formatted_positions, amt_tup)}
 
         else: # a single amount for all positions
-            bets = {p:amt_tup for p in updated_positions}
-
+            try:
+                bets = {p:amt_tup for p in formatted_positions}
+            except Exception as ex:
+                raise ValueError(f"Error parsing bets: {ex}")
 
         for player in self._players:
             if player.name == player_name:
                 player.place_dict_bet(bets, self._wheel_positions)
-        else:
-            raise ValueError(f"Player {player_name} not found")
+            else:
+                raise ValueError(f"Player {player_name} not found")
 
 
 
