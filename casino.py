@@ -1,7 +1,8 @@
 import ast
 import tkinter as tk
 from tkinter import ttk
-
+import matplotlib.pyplot as plt
+from matplotlib.lines import lineStyles
 
 from logger import Logger
 import poker
@@ -74,7 +75,7 @@ class UserInterface(tk.Tk):
         self.roulette_label_bet_positions.grid(row=2, column=1, padx=10, pady=10)
 
         self.roulette_entry_number_of_spins = ttk.Entry(self.roulette_left_frame)
-        self.roulette_entry_number_of_spins.insert(0, '1')
+        self.roulette_entry_number_of_spins.insert(0, '100')
         self.roulette_entry_number_of_spins.grid(row=3, column=0, padx=10, pady=10)
         self.roulette_label_number_of_spins = ttk.Label(self.roulette_left_frame, text="Number of Spins")
         self.roulette_label_number_of_spins.grid(row=3, column=1, padx=10, pady=10)
@@ -93,6 +94,25 @@ class UserInterface(tk.Tk):
         # create button "run simulation"
         self.roulette_run_simulation_button = ttk.Button(self.roulette_right_frame, text="Run Simulation", command=self.run_roulette_simulation)
         self.roulette_run_simulation_button.pack(pady=10)
+
+        # create a text field to display "Final Bank Amount" after the simulation
+
+        self.roulette_final_bank_label = ttk.Label(self.roulette_right_frame, text="Final Bank Value: ")
+        self.roulette_final_bank_label.pack(pady=10)
+        self.roulette_final_bank_value = ttk.Label(self.roulette_right_frame, text="0")
+        self.roulette_final_bank_value.pack(pady=10)
+
+        # create a text field to display the "Max Bank Value"
+        self.roulette_max_bank_label = ttk.Label(self.roulette_right_frame, text="Max Bank Value: ")
+        self.roulette_max_bank_label.pack(pady=10)
+        self.roulette_max_bank_value = ttk.Label(self.roulette_right_frame, text="0")
+        self.roulette_max_bank_value.pack(pady=10)
+
+        # create a text field to display the "Min Bank Value"
+        self.roulette_min_bank_label = ttk.Label(self.roulette_right_frame, text="Min Bank Value: ")
+        self.roulette_min_bank_label.pack(pady=10)
+        self.roulette_min_bank_value = ttk.Label(self.roulette_right_frame, text="0")
+        self.roulette_min_bank_value.pack(pady=10)
 
         # ---------- Poker Stuff -----------------------
 
@@ -147,12 +167,12 @@ class UserInterface(tk.Tk):
             # create a new table based on user settings
             use_euro = self.roulette_european_var.get()
             roulette_table = self.casino.roulette_table = roulette.RouletteTable(european=use_euro)
-            bank_amount = self.roulette_entry_bank_amount.get()
+            bank_amount = float(self.roulette_entry_bank_amount.get())
 
             # add a player to the roulette table
             p_name = 'Bob'
             player = roulette.RoulettePlayer(p_name)
-            player.chips += float(bank_amount)
+            player.chips += bank_amount
             roulette_table.add_player(player)
 
             # setup the game
@@ -165,6 +185,23 @@ class UserInterface(tk.Tk):
 
                 # display the results in the game messages text field
                 self.game_messages.replace("1.0", tk.END, roulette_table.get_game_state_string())
+
+            bank = player.running_bank
+
+            # plot the history of the bank
+            plot_label = f"{p_name}'s Bank History  --  Min: {min(bank):.2f}  --  Max: {max(bank):.2f}  --  Take Home: {bank[-1]-bank_amount:.2f}"
+            plt.plot(bank, marker='o', linestyle='-', label=f"{p_name}'s Bank History")
+            plt.plot([bank_amount]*len(bank), marker='', linestyle='-', color='black', label=f"Initial Bank")
+            plt.legend()
+            plt.title(plot_label)
+            plt.xlabel("Spin Number")
+            plt.ylabel("Bank Amount")
+            plt.show()
+
+            # update the roulette fields
+            self.roulette_final_bank_value.config(text=f"{player.running_bank[-1]:.2f}")
+            self.roulette_max_bank_value.config(text=f"{max(player.running_bank):.2f}")
+            self.roulette_min_bank_value.config(text=f"{min(player.running_bank):.2f}")
 
 
         except Exception as ex:

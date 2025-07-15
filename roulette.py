@@ -7,6 +7,7 @@ class RoulettePlayer(CasinoPlayer):
         super().__init__(name)
         self.bet_positions = dict() # like {<bet positions>: <amount>, ...} ex: {(23): 5.0, (2,5): 12.0, (12,15,11,14): 15.0}
         self._running_winning_numbers = [] # type: list[str] # a list of winning positions after the wheel is spun
+        self.running_bank = []
 
     def place_bet(self, positions: tuple, amount: float, wheel_positions: list):
         """ positions is a list of 1, 2, or 4 positions to bet. If more than one position is given the numbers must be
@@ -28,6 +29,13 @@ class RoulettePlayer(CasinoPlayer):
 
         self.bet_positions.update({tuple(positions): amount})
         self.chips -= amount
+        # self.running_bank.append(self.chips)
+
+    def payout(self, money_in):
+        """ use to help track the running bank account """
+        if money_in > 0: # note, the chips are removed in the "place_bet method"
+            self.chips += money_in
+        self.running_bank.append(self.chips)
 
     def place_dict_bet(self, bet: dict, wheel_positions: list):
         """ places a dictionary style bet
@@ -41,8 +49,11 @@ class RoulettePlayer(CasinoPlayer):
         :amount: The amount won or lost.
         :position: The winning position. """
         if winner:
-            self.chips += amount
             self._running_winning_numbers.append(position)
+        self.payout(amount)
+
+    def __str__(self):
+        return f"PokerPlayer: {self.name}, Chips: {self.chips}, Bets: {self.bet_positions}, Winning Numbers: {self._running_winning_numbers}"
 
 
 
@@ -58,7 +69,7 @@ class RouletteTable:
         if european is False:
             self._wheel_positions.append('00')
 
-        self._players = []
+        self._players = [] # type: [RoulettePlayer]
         self._winning_positions = [] # type: list[str] # a list of winning positions after the wheel is spun
 
         self._red_black_lut = {
@@ -90,13 +101,17 @@ class RouletteTable:
 
         self._winning_positions.append(winning_position)
         for player in self._players: # type: RoulettePlayer
+
+            payout = 0
+            winner = False
+            # iterate over positions and look for a winner
             for positions, amount in player.bet_positions.items(): # positions like: (23) or (2,5); amount like 10.0
 
                 str_pos = list((str(p) for p in positions)) # the string version of the positions, like ('23') or ('2', '5')
 
                 if winning_position in str_pos: # check if the player has a bet on the winning position
+                    winner = True
 
-                    payout = 0
                     if len(positions) == 1:
                         payout = amount * 36
 
@@ -109,7 +124,7 @@ class RouletteTable:
                     elif len(positions) == 4:
                         payout = amount * 8
 
-                    player.update_after_spin(True, payout, winning_position)
+            player.update_after_spin(winner, payout, winning_position)
         return winning_position
 
     def get_table_numbers_string(self) -> str:
@@ -151,14 +166,18 @@ class RouletteTable:
                     grn_str += f"    "
                 elif color == 'black':
                     red_str += f"    "
-                    black_str += f" {pos:02} "
+                    black_str += f" {pos:2} "
                     grn_str += f"    "
                 else: # green
                     red_str += f"    "
                     black_str += f"    "
-                    grn_str += f" {pos:02} "
+                    grn_str += f" {pos:2} "
 
-        state_string = f"{table}\n\n\nWinning Numbers:\n{red_str}\n{black_str}\n{grn_str}"
+        player = "Hit the Run Simulation button"
+        if len(self._players) > 0:
+            player = f"{self._players[0]}"
+
+        state_string = f"{table}\n\n\nWinning Numbers:\n{red_str}\n{black_str}\n{grn_str}\n\nPlayer: {player}"
 
         return state_string
 

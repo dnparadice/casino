@@ -2,7 +2,6 @@
 
 <img src="media/PyCasino - Poker 20250614.jpg" alt="Casino UI - Poker" width="800" height="auto">
 
-### This app is under development 
 
 The goal of this app is to simulate playing casino games to help players understand probability and odds.
 
@@ -51,6 +50,11 @@ you can use the code on the command line to play the same game as in the UI with
 +--------+ +--------+ +--------+ +--------+ +--------+ 
 ```
 
+#### Roulette
+
+The Roulette game allows you to run many simulations of the game very fast to see how betting 'strategies' work. You
+can make number bets, and bet across groups of numbers as on an actual roulette table. The results of all the spins are 
+displayed on the UI and a plot is generated to show the history of your cash in hand (Bank).
 
 ### todos
 - need to get the probability of other players getting a better hand 
