@@ -56,5 +56,8 @@ The Roulette game allows you to run many simulations of the game very fast to se
 can make number bets, and bet across groups of numbers as on an actual roulette table. The results of all the spins are 
 displayed on the UI and a plot is generated to show the history of your cash in hand (Bank).
 
+<img src="media/roulette and plot 20250715.jpg" alt="Casino UI - Poker" width="800" height="auto">
+
+
 ### todos
 - need to get the probability of other players getting a better hand 
