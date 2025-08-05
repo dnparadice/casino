@@ -1229,6 +1229,7 @@ class PokerTable:
     def _check_players_left_reset_round_and_progress_game(self, id: str):
         self._betting_round = 0
         self.current_table_bet = 0
+        self._human_has_bet = False
         players_left = self._check_for_players_still_in_the_game()
         if len(players_left) > 1:
             self.progress_game(id)
@@ -1328,7 +1329,18 @@ class PokerTable:
                 tie_l = None
 
             elif hand_rank.value == winning_player_l[1].value and high_card.rank.value == winning_player_l[2].rank.value:
-                    tie_l = l # no winner its a tie
+
+                    if hand_rank.value == HandRank.FULL_HOUSE.value:
+                        # if we have a full house, we need to check the three of a kind
+                        hcv = high_card.rank.value
+                        hcc = 0
+                        for card in hand.cards:
+                            if card.rank.value == hcv:
+                                hcc += 1
+                        if hcc == 3: # this hand is the winner
+                            winning_player_l = l # new winner
+                    else:
+                        tie_l = l # no winner its a tie
             # else nothing
 
         if tie_l is not None: # check if the current winning hand is higher than the tie hand

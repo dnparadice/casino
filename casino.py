@@ -28,10 +28,10 @@ class UserInterface(tk.Tk):
         super().__init__()
         self.casino = casino
         self.title("Casino")
-        self.geometry("800x700")
+        self.geometry("1000x900")
 
         # add large text filed with monospaced font to display game messages
-        self.game_messages = tk.Text(self, font=("Courier", 12))
+        self.game_messages = tk.Text(self, font=("Courier", 20))
         self.game_messages.pack(fill=tk.BOTH, expand=True)
 
         self.notebook = ttk.Notebook(self)
