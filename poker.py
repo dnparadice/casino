@@ -1155,6 +1155,11 @@ class PokerTable:
             elif self.game_state == GameState.SHOWDOWN:
                 self._process_winner_round()
 
+            elif self.game_state ==GameState.END_GAME:
+                # if all but 1 player has folded, we have a winner
+                self._process_winner_round()
+
+
     def _bet_around_initial(self):
         """ iterate over players and make bets till you get to the human player """
         log.message(f"Bet around initial: {self._betting_order[self.current_betting_position_get()].name}")
@@ -1196,7 +1201,13 @@ class PokerTable:
         table_cards = self.table_cards
         local_betting_order = self._betting_order
         game_state = self.game_state
-        rest_of_players = local_betting_order[self.current_betting_position_get():]
+
+        if local_betting_order[self.current_betting_position_get()].human is True:
+            idx = self.current_betting_position_get() + 1
+        else:
+            idx = self.current_betting_position_get()
+
+        rest_of_players = local_betting_order[idx:]
         for player in rest_of_players:  # type: PokerPlayer
             if player.folded is False:
                 if player.human is False:
@@ -1233,8 +1244,10 @@ class PokerTable:
         players_left = self._check_for_players_still_in_the_game()
         if len(players_left) > 1:
             self.progress_game(id)
-        else:
-            raise Exception(f"Winner by mass folding! {players_left[0]}")
+        else: # winner by mass folding
+            self.game_state = GameState.END_GAME
+            self.progress_game('we have a mass folding here')
+
 
     def _check_table_call(self) -> bool:
         """ check if all players have called the current table bet, used to determine if we can move to the next betting round """
