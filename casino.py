@@ -32,6 +32,7 @@ class UserInterface(tk.Tk):
 
         # add large text filed with monospaced font to display game messages
         self.game_messages = tk.Text(self, font=("Courier", 20))
+        self.game_messages.config(height=30)
         self.game_messages.pack(fill=tk.BOTH, expand=True)
 
         self.notebook = ttk.Notebook(self)
@@ -137,13 +138,6 @@ class UserInterface(tk.Tk):
         self.poker_table_label = ttk.Label(self.poker_table_frame, text="Poker Table")
         self.poker_table_label.pack()
 
-        self.pot = ttk.Label(self.poker_table_frame, text="Pot: 0")
-        self.pot.pack()
-        self.current_bet = ttk.Label(self.poker_table_frame, text="Current Bet: 0")
-        self.current_bet.pack()
-        self.poker_game_state = ttk.Label(self.poker_table_frame, text="Game State")
-        self.poker_game_state.pack()
-
 
     def _notebook_tab_changed(self, event):
         """ Handles the notebook tab change event to update the game messages """
@@ -151,7 +145,7 @@ class UserInterface(tk.Tk):
         if current_tab == 0:
             # Poker tab selected
             self.game_messages.replace("1.0", tk.END, self.casino.poker_table.get_game_state_string())
-            self.update_pot_and_current_bet_display()
+            self.update_poker_tab_display()
         elif current_tab == 1:
             self.game_messages.replace("1.0", tk.END, self.casino.roulette_table.get_game_state_string())
 
@@ -216,10 +210,15 @@ class UserInterface(tk.Tk):
     # -------------------------------------------------------------------------------------
 
 
-    def update_pot_and_current_bet_display(self):
-        self.pot.config(text=f"Pot: {self.casino.poker_table.pot}")
-        self.current_bet.config(text=f"Current Bet: {self.casino.poker_table.current_table_bet}")
-        self.poker_game_state.config(text=f"Game State: {self.casino.poker_table.game_state.name}")
+    def update_poker_tab_display(self):
+        """ used to update any fields in the poker tab that need to be updated """
+        # update the bet field to have the difference between the current bet and the last bet
+        table = self.casino.poker_table # type: poker.PokerTable
+        if table.human_players:
+            human_player = table.human_players[0]
+            # update the bet amount entry field
+            self.bet_amount.delete(0, tk.END)
+            self.bet_amount.insert(0, str(table.current_table_bet - human_player.current_bet))
 
     def start_poker(self):
         table = self.casino.poker_table # type: poker.PokerTable
@@ -236,7 +235,7 @@ class UserInterface(tk.Tk):
             table.next_game()
         # print game state to the game messages text field
         self.game_messages.replace("1.0", tk.END, self.casino.poker_table.get_game_state_string())
-        self.update_pot_and_current_bet_display()
+        self.update_poker_tab_display()
 
     def button_bet(self):
         amount = self.bet_amount.get()
@@ -247,7 +246,7 @@ class UserInterface(tk.Tk):
             self.game_messages.replace("1.0", tk.END, f'Invalid Bet: {ex}')
         else:
             table.progress_game('button_bet')
-            self.update_pot_and_current_bet_display()
+            self.update_poker_tab_display()
             # replace game message with updated message
             self.game_messages.replace("1.0", tk.END, table.get_game_state_string())
 
@@ -260,7 +259,7 @@ class UserInterface(tk.Tk):
             self.game_messages.replace("1.0", tk.END, f'Invalid Bet: {ex}')
         else:
             table.progress_game('button_bet')
-            self.update_pot_and_current_bet_display()
+            self.update_poker_tab_display()
             # replace game message with updated message
             self.game_messages.replace("1.0", tk.END, table.get_game_state_string())
 
@@ -268,7 +267,7 @@ class UserInterface(tk.Tk):
         for human in self.casino.poker_table.human_players: # type: poker.PokerPlayer # at this point there is only 1 human player but it's a list
             human.folded = True
         self.casino.poker_table.progress_game('button_bet')
-        self.update_pot_and_current_bet_display()
+        self.update_poker_tab_display()
         # replace game message with updated message
         self.game_messages.replace("1.0", tk.END, self.casino.poker_table.get_game_state_string())
 

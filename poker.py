@@ -1398,6 +1398,8 @@ class PokerTable:
 
                 string += f"| {player.name}{st}|   {dealer}    |   {folded}  | {player.chips}{st2}| {player.current_bet}{st3}|\n"
 
+            string += f"-------------------------------------------------\n"
+            string += f"Pot: {self.pot}     Current Bet: {self.current_table_bet}     Game State: {self.game_state.name} \n"
             string += f"\n"
             for player in self.human_players:  # type: PokerPlayer
                 string += f"Player: {player.name} --- chips: {player.chips} \n"
